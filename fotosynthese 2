@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>VR Les: Fotosynthese High-Tech</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/protyze/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+  </head>
+  <body>
+    <a-scene physics="gravity: -9.8" background="color: #B3E5FC">
+
+```
+  <!-- Zon met licht -->
+  <a-entity light="type: directional; intensity: 1; castShadow: true" position="0 8 -5"></a-entity>
+  <a-sphere id="sun" position="0 8 -5" radius="1.2" color="#FFD700" 
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 8000"
+            event-set__click="_event: click; color: #FFA500"></a-sphere>
+  <a-text value="Klik op de zon voor lichtenergie!" position="-3 9 -5" color="#000"></a-text>
+
+  <!-- Grond met texture -->
+  <a-plane rotation="-90 0 0" width="20" height="20" color="#7BC8A4" src="https://cdn.aframe.io/a-painter/images/floor.jpg" repeat="4 4"></a-plane>
+
+  <!-- Plant -->
+  <a-entity id="plant" position="0 0 -5">
+    <a-cylinder radius="0.2" height="1.5" color="#4CAF50" animation="property: position; dir: alternate; dur: 1000; loop: true; to: 0 0.02 0"></a-cylinder>
+    <a-text id="plant-info" value="" position="-2 2 0" color="#000"></a-text>
+  </a-entity>
+
+  <!-- Water emmer met drag & drop -->
+  <a-box id="water" position="2 0.5 -4" depth="0.5" height="1" width="0.5" color="#00BFFF"
+         draggable event-set__hover="_event: mouseenter; color: #1E90FF"
+         event-set__leave="_event: mouseleave; color: #00BFFF">
+  </a-box>
+  <a-text value="Sleep water naar de plant" position="1 2 -4" color="#000"></a-text>
+
+  <!-- Animatie zuurstof -->
+  <a-entity id="oxygen" position="0 2 -5" visible="false">
+    <a-sphere color="#00FFFF" radius="0.05" animation="property: position; to: 0 4 -5; dur: 3000; loop: true; dir: alternate"></a-sphere>
+  </a-entity>
+
+  <!-- Camera + cursor -->
+  <a-entity camera look-controls>
+    <a-cursor fuse="true" fuse-timeout="500"></a-cursor>
+  </a-entity>
+</a-scene>
+
+<script>
+  const plant = document.querySelector('#plant');
+  const sun = document.querySelector('#sun');
+  const water = document.querySelector('#water');
+  const plantInfo = document.querySelector('#plant-info');
+  const oxygen = document.querySelector('#oxygen');
+
+  let sunlight = false;
+  let watered = false;
+
+  sun.addEventListener('click', () => {
+    sunlight = true;
+    checkPhotosynthesis();
+  });
+
+  // Detect water "dropping" onto plant
+  water.addEventListener('mouseup', () => {
+    const waterPos = water.object3D.position;
+    const plantPos = plant.object3D.position;
+    const distance = waterPos.distanceTo(plantPos);
+    if(distance < 1.5) {
+      watered = true;
+      water.setAttribute('visible', false);
+      checkPhotosynthesis();
+    }
+  });
+
+  function checkPhotosynthesis() {
+    if(sunlight && watered) {
+      plantInfo.setAttribute('value', '🌿 Fotosynthese actief! Glucose en zuurstof worden geproduceerd! ☀️💧');
+      plant.children[0].setAttribute('color', '#32CD32');
+      oxygen.setAttribute('visible', true);
+    } else if(!sunlight) {
+      plantInfo.setAttribute('value', 'De plant heeft zonlicht nodig!');
+    } else if(!watered) {
+      plantInfo.setAttribute('value', 'De plant heeft water nodig!');
+    }
+  }
+</script>
+```
+
+  </body>
+</html>
