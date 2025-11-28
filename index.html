@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <title>Fotosynthese VR - Pro</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    body { margin:0; font-family: Arial, Helvetica, sans-serif; }
+    #ui {
+      position: absolute; left: 10px; top: 10px; z-index: 999;
+      background: rgba(255,255,255,0.9); padding:10px; border-radius:8px;
+      max-width: 320px;
+    }
+    #startBtn {
+      display:block; padding:8px 12px; background:#2d89ef; color:white; border:none; border-radius:6px;
+      font-weight:600; cursor:pointer;
+    }
+    #instructions { font-size:14px; color:#222; margin-top:8px; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <button id="startBtn">Start VR demo (1x tik)</button>
+    <div id="instructions">Kijk 1 seconde naar een object om de uitleg te horen.</div>
+    <div style="margin-top:8px; font-size:13px; color:#444;">
+      Tip: Open deze pagina in Safari op iPhone en gebruik je Shinecon bril.
+    </div>
+  </div>
+
+  <a-scene vr-mode-ui="enabled: true" embedded>
+    <a-assets>
+      <!-- Vervang de src met jouw geüploade mp3-bestanden (GitHub raw links of je server) -->
+      <audio id="a_intro" src="audio/intro.mp3"></audio>
+      <audio id="a_sun" src="audio/sun.mp3"></audio>
+      <audio id="a_co2" src="audio/co2.mp3"></audio>
+      <audio id="a_chloro" src="audio/chloro.mp3"></audio>
+      <audio id="a_o2" src="audio/o2.mp3"></audio>
+      <audio id="a_end" src="audio/end.mp3"></audio>
+    </a-assets>
+
+    <!-- Environment -->
+    <a-sky color="#0e5d2f"></a-sky>
+
+    <!-- LIGHT / SUN particle -->
+    <a-entity id="sun" position="0 3 -4" >
+      <a-sphere radius="0.35" color="#ffd54f"></a-sphere>
+      <a-animation attribute="position" to="0 2 -2" direction="alternate" dur="3000" repeat="indefinite"></a-animation>
+    </a-entity>
+
+    <!-- Chloroplasts group -->
+    <a-entity id="chloroplasts">
+      <a-sphere id="chl1" class="gazeTarget" position="-1 1 -3.5" radius="0.45" color="#2ecc71"></a-sphere>
+      <a-sphere id="chl2" class="gazeTarget" position="0.8 0.6 -2.5" radius="0.4" color="#27ae60"></a-sphere>
+      <a-sphere id="chl3" class="gazeTarget" position="0 -0.6 -4.2" radius="0.35" color="#1e8449"></a-sphere>
+    </a-entity>
+
+    <!-- CO2 molecule (grey) -->
+    <a-sphere id="co2" class="gazeTarget" position="-2 0.8 -5" radius="0.25" color="#666"></a-sphere>
+
+    <!-- O2 molecule (blue) -->
+    <a-sphere id="o2" class="gazeTarget" position="2 1 -3" radius="0.18" color="#88CFFA"></a-sphere>
+
+    <!-- Floating info text (visible in VR world) -->
+    <a-entity id="label" position="0 2 -2">
+      <a-text id="infoText" value="Welkom in het blad! Druk start en kijk rond." color="#fff" width="4"></a-text>
+    </a-entity>
+
+    <!-- Camera with cursor -->
+    <a-entity id="cameraRig" position="0 1.6 0">
+      <a-entity camera look-controls wasd-controls>
+        <a-entity cursor="fuse: true; fuseTimeout: 1000"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.015"
+                  material="color: #fff; shader: flat">
+        </a-entity>
+      </a-entity>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    // Helper: load audio elements from assets
+    const audioMap = {
+      "intro": document.querySelector('#a_intro'),
+      "sun": document.querySelector('#a_sun'),
+      "co2": document.querySelector('#a_co2'),
+      "chloro": document.querySelector('#a_chloro'),
+      "o2": document.querySelector('#a_o2'),
+      "end": document.querySelector('#a_end')
+    };
+
+    // Ensure user has tapped once to allow audio on iPhone
+    const startBtn = document.getElementById('startBtn');
+    let userStarted = false;
+    startBtn.addEventListener('click', () => {
+      // play and immediately pause a short sound to unlock audio on iOS
+      try {
+        Object.values(audioMap).forEach(a => { a.play().catch(()=>{}); a.pause(); a.currentTime = 0; });
+      } catch(e){}
+      userStarted = true;
+      startBtn.classList.add('hidden');
+      document.getElementById('instructions').innerText = "Kijk 1 seconde naar een object om uitleg te horen.";
+      // play intro short clip
+      if (audioMap.intro) { audioMap.intro.play().catch(()=>{}); }
+    });
+
+    // Gaze component using events from the A-Frame cursor (mouseenter / mouseleave)
+    AFRAME.registerComponent('gaze-handler', {
+      schema: { soundId: {type: 'string'} },
+      init: function () {
+        const el = this.el;
+        let timer = null;
+        const soundId = this.data.soundId;
+        el.addEventListener('mouseenter', () => {
+          if (!userStarted) return; // require start
+          timer = setTimeout(() => {
+            // play the mapped audio (only once)
+            const audioEl = document.querySelector('#' + soundId);
+            if (audioEl && audioEl.paused) {
+              audioEl.play().catch(()=>{});
+            }
+            // optional: update text
+            const infoText = document.querySelector('#infoText');
+            if (infoText) {
+              if (soundId === 'a_sun') infoText.setAttribute('value', 'Zonlicht geeft energie!');
+              if (soundId === 'a_co2') infoText.setAttribute('value', 'CO₂ komt binnen vanuit de lucht.');
+              if (soundId === 'a_chloro') infoText.setAttribute('value', 'In de chloroplast wordt suiker gemaakt.');
+              if (soundId === 'a_o2') infoText.setAttribute('value', 'Zuurstof komt vrij en stroomt weg.');
+              if (soundId === 'a_end') infoText.setAttribute('value', 'Klaar! Bekijk nog meer onderdelen.');
+            }
+          }, 1000); // 1 second gaze
+        });
+        el.addEventListener('mouseleave', () => {
+          clearTimeout(timer);
+        });
+      }
+    });
+
+    // Attach gaze-handler with correct audio ids
+    document.addEventListener('DOMContentLoaded', () => {
+      // mapping element id -> asset id
+      const mapping = {
+        'sun': 'a_sun',
+        'co2': 'a_co2',
+        'chl1': 'a_chloro',
+        'chl2': 'a_chloro',
+        'chl3': 'a_chloro',
+        'o2': 'a_o2'
+      };
+      Object.keys(mapping).forEach(elemId => {
+        const el = document.querySelector('#' + elemId);
+        if (el) {
+          el.setAttribute('class', 'gazeTarget');
+          el.setAttribute('gaze-handler', 'soundId: ' + mapping[elemId]);
+        }
+      });
+    });
+
+    // OPTIONAL: guided tour (camera movement) - can be triggered after intro
+    function startGuidedTour() {
+      const cam = document.querySelector('#cameraRig');
+      if (!cam) return;
+      // simple animation: move forward slowly
+      cam.setAttribute('animation__tour', 'property: position; to: 0 1.6 -4; dur: 8000; easing: linear; autoplay: true');
+    }
+
+    // Expose startGuidedTour if you want to trigger later
+    window.startGuidedTour = startGuidedTour;
+
+  </script>
+</body>
+</html>
